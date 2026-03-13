@@ -5,10 +5,10 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const Admin = require('./models/Admin');
 
-// Load env vars
+// Load env variables
 dotenv.config();
 
-// Connect to database
+// Connect database
 connectDB();
 
 // Route imports
@@ -20,36 +20,60 @@ const blogRoutes = require('./routes/blogRoutes');
 
 const app = express();
 
-// Middleware
-app.use(cors());
+/* ------------------ CORS CONFIG ------------------ */
+
+const corsOptions = {
+  origin: [
+    "http://localhost:5173",  // React Vite
+    "http://localhost:3000"   // React CRA (optional)
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+app.use(cors(corsOptions));
+
+/* ------------------ MIDDLEWARE ------------------ */
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+/* ------------------ ROUTES ------------------ */
+
 app.use('/api/admin', adminRoutes);
 app.use('/api/gallery', galleryRoutes);
 app.use('/api/notices', noticeRoutes);
 app.use('/api/careers', careerRoutes);
 app.use('/api/blogs', blogRoutes);
 
-// Create default admin if not exists
+/* ------------------ DEFAULT ADMIN ------------------ */
+
 const createDefaultAdmin = async () => {
   try {
-    const adminExists = await Admin.findOne({ username: process.env.ADMIN_USERNAME || 'jadhavar' });
-    
+
+    const adminExists = await Admin.findOne({
+      username: process.env.ADMIN_USERNAME || "jadhavar"
+    });
+
     if (!adminExists) {
+
       await Admin.create({
-        username: process.env.ADMIN_USERNAME || 'jadhavar',
-        password: process.env.ADMIN_PASSWORD || 'jadhavar123',
+        username: process.env.ADMIN_USERNAME || "jadhavar",
+        password: process.env.ADMIN_PASSWORD || "jadhavar123",
       });
-      console.log('Default admin created successfully');
+
+      console.log("Default admin created successfully");
+
     }
+
   } catch (error) {
-    console.error('Error creating default admin:', error);
+    console.error("Error creating default admin:", error);
   }
 };
 
-// Start server
+/* ------------------ SERVER ------------------ */
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
