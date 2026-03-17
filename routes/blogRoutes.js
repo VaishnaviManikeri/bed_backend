@@ -7,17 +7,17 @@ const {
   createBlog,
   updateBlog,
   deleteBlog,
-  incrementViews
+  getAdminBlogs
 } = require('../controllers/blogController');
 const { protect } = require('../middleware/authMiddleware');
 
 // Public routes
 router.get('/', getBlogs);
-router.get('/slug/:slug', getBlogBySlug);
-router.get('/:id', getBlogById);
-router.patch('/:id/views', incrementViews);
+router.get('/:slug', getBlogBySlug);
 
-// Protected routes (require authentication)
+// Admin routes
+router.get('/admin/all', protect, getAdminBlogs);
+router.get('/admin/:id', protect, getBlogById);
 router.post('/', protect, createBlog);
 router.put('/:id', protect, updateBlog);
 router.delete('/:id', protect, deleteBlog);

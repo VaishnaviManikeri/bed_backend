@@ -4,7 +4,8 @@ const blogSchema = new mongoose.Schema({
   title: {
     type: String,
     required: [true, 'Please add a title'],
-    trim: true
+    trim: true,
+    maxlength: [200, 'Title cannot be more than 200 characters']
   },
   slug: {
     type: String,
@@ -19,22 +20,26 @@ const blogSchema = new mongoose.Schema({
   excerpt: {
     type: String,
     required: [true, 'Please add an excerpt'],
-    maxlength: [200, 'Excerpt cannot be more than 200 characters']
+    maxlength: [500, 'Excerpt cannot be more than 500 characters']
   },
   featuredImage: {
     type: String,
-    default: null
+    default: 'default-blog.jpg'
   },
   author: {
     type: String,
+    required: [true, 'Please add an author'],
     default: 'Admin'
   },
   category: {
     type: String,
+    required: [true, 'Please add a category'],
+    enum: ['Technology', 'News', 'Events', 'Updates', 'General'],
     default: 'General'
   },
   tags: [{
-    type: String
+    type: String,
+    trim: true
   }],
   status: {
     type: String,
@@ -45,17 +50,31 @@ const blogSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  readTime: {
+    type: Number,
+    min: 1
+  },
   publishedAt: {
     type: Date
   },
-  metaTitle: String,
-  metaDescription: String,
-  metaKeywords: String
+  metaTitle: {
+    type: String,
+    trim: true
+  },
+  metaDescription: {
+    type: String,
+    trim: true,
+    maxlength: [160, 'Meta description cannot be more than 160 characters']
+  },
+  metaKeywords: [{
+    type: String,
+    trim: true
+  }]
 }, {
   timestamps: true
 });
 
-// Create slug from title before saving
+// Create slug from title
 blogSchema.pre('save', function(next) {
   if (this.isModified('title')) {
     this.slug = this.title
@@ -65,12 +84,21 @@ blogSchema.pre('save', function(next) {
       .replace(/^-|-$/g, '');
   }
   
-  // Set publishedAt when status changes to published
+  // Calculate read time (average reading speed: 200 words per minute)
+  if (this.isModified('content')) {
+    const wordCount = this.content.split(/\s+/).length;
+    this.readTime = Math.ceil(wordCount / 200);
+  }
+
+  // Set published date when status changes to published
   if (this.isModified('status') && this.status === 'published' && !this.publishedAt) {
     this.publishedAt = Date.now();
   }
-  
+
   next();
 });
+
+// Index for search
+blogSchema.index({ title: 'text', content: 'text', excerpt: 'text' });
 
 module.exports = mongoose.model('Blog', blogSchema);

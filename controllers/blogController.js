@@ -1,34 +1,21 @@
 const Blog = require('../models/Blog');
 
-// @desc    Get all blogs
+// @desc    Get all blogs (public)
 // @route   GET /api/blogs
 // @access  Public
 const getBlogs = async (req, res) => {
   try {
-    const { page = 1, limit = 10, status, category, search } = req.query;
-    const query = {};
-
-    // Filter by status (default to published for public view)
-    if (status) {
-      query.status = status;
-    } else {
-      // If no status specified, show only published blogs for public routes
-      // Admin routes should handle this differently
-      query.status = 'published';
-    }
+    const { page = 1, limit = 10, category, search, status = 'published' } = req.query;
+    const query = { status };
 
     // Filter by category
     if (category) {
       query.category = category;
     }
 
-    // Search in title and content
+    // Search functionality
     if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } },
-        { excerpt: { $regex: search, $options: 'i' } }
-      ];
+      query.$text = { $search: search };
     }
 
     const blogs = await Blog.find(query)
@@ -51,18 +38,19 @@ const getBlogs = async (req, res) => {
 };
 
 // @desc    Get single blog by slug
-// @route   GET /api/blogs/slug/:slug
+// @route   GET /api/blogs/:slug
 // @access  Public
 const getBlogBySlug = async (req, res) => {
   try {
-    const blog = await Blog.findOne({ 
-      slug: req.params.slug,
-      status: 'published' 
-    });
-
+    const blog = await Blog.findOne({ slug: req.params.slug, status: 'published' });
+    
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
     }
+
+    // Increment views
+    blog.views += 1;
+    await blog.save();
 
     res.json(blog);
   } catch (error) {
@@ -71,13 +59,13 @@ const getBlogBySlug = async (req, res) => {
   }
 };
 
-// @desc    Get single blog by ID
-// @route   GET /api/blogs/:id
-// @access  Public
+// @desc    Get single blog by ID (admin)
+// @route   GET /api/blogs/admin/:id
+// @access  Private/Admin
 const getBlogById = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
-
+    
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
     }
@@ -91,10 +79,10 @@ const getBlogById = async (req, res) => {
 
 // @desc    Create a blog
 // @route   POST /api/blogs
-// @access  Private
+// @access  Private/Admin
 const createBlog = async (req, res) => {
   try {
-    const { title, content, excerpt, featuredImage, category, tags, status, metaTitle, metaDescription, metaKeywords } = req.body;
+    const { title, content, excerpt, featuredImage, author, category, tags, status, metaTitle, metaDescription, metaKeywords } = req.body;
 
     // Check if slug already exists
     const slug = title
@@ -110,16 +98,17 @@ const createBlog = async (req, res) => {
 
     const blog = await Blog.create({
       title,
+      slug,
       content,
       excerpt,
       featuredImage,
-      author: req.admin?.username || 'Admin',
-      category,
+      author: author || 'Admin',
+      category: category || 'General',
       tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
-      status,
+      status: status || 'draft',
       metaTitle: metaTitle || title,
       metaDescription: metaDescription || excerpt,
-      metaKeywords
+      metaKeywords: metaKeywords ? metaKeywords.split(',').map(keyword => keyword.trim()) : []
     });
 
     res.status(201).json(blog);
@@ -131,7 +120,7 @@ const createBlog = async (req, res) => {
 
 // @desc    Update a blog
 // @route   PUT /api/blogs/:id
-// @access  Private
+// @access  Private/Admin
 const updateBlog = async (req, res) => {
   try {
     let blog = await Blog.findById(req.params.id);
@@ -140,36 +129,26 @@ const updateBlog = async (req, res) => {
       return res.status(404).json({ message: 'Blog not found' });
     }
 
-    const { title, content, excerpt, featuredImage, category, tags, status, metaTitle, metaDescription, metaKeywords } = req.body;
+    const { title, content, excerpt, featuredImage, author, category, tags, status, metaTitle, metaDescription, metaKeywords } = req.body;
 
-    // If title is being updated, check if new slug is unique
-    if (title && title !== blog.title) {
-      const newSlug = title
-        .toLowerCase()
-        .replace(/[^a-zA-Z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-
-      const existingBlog = await Blog.findOne({ slug: newSlug, _id: { $ne: req.params.id } });
-      if (existingBlog) {
-        return res.status(400).json({ message: 'A blog with this title already exists' });
-      }
-    }
+    // Prepare update data
+    const updateData = {
+      title,
+      content,
+      excerpt,
+      featuredImage,
+      author,
+      category,
+      tags: tags ? (Array.isArray(tags) ? tags : tags.split(',').map(tag => tag.trim())) : blog.tags,
+      status,
+      metaTitle,
+      metaDescription,
+      metaKeywords: metaKeywords ? (Array.isArray(metaKeywords) ? metaKeywords : metaKeywords.split(',').map(keyword => keyword.trim())) : blog.metaKeywords
+    };
 
     blog = await Blog.findByIdAndUpdate(
       req.params.id,
-      {
-        title,
-        content,
-        excerpt,
-        featuredImage,
-        category,
-        tags: tags ? tags.split(',').map(tag => tag.trim()) : blog.tags,
-        status,
-        metaTitle: metaTitle || title,
-        metaDescription: metaDescription || excerpt,
-        metaKeywords
-      },
+      updateData,
       { new: true, runValidators: true }
     );
 
@@ -182,7 +161,7 @@ const updateBlog = async (req, res) => {
 
 // @desc    Delete a blog
 // @route   DELETE /api/blogs/:id
-// @access  Private
+// @access  Private/Admin
 const deleteBlog = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
@@ -191,31 +170,44 @@ const deleteBlog = async (req, res) => {
       return res.status(404).json({ message: 'Blog not found' });
     }
 
-    await blog.deleteOne();
+    await blog.remove();
 
-    res.json({ message: 'Blog removed' });
+    res.json({ message: 'Blog removed successfully' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error' });
   }
 };
 
-// @desc    Increment blog views
-// @route   PATCH /api/blogs/:id/views
-// @access  Public
-const incrementViews = async (req, res) => {
+// @desc    Get all blogs for admin (including drafts)
+// @route   GET /api/blogs/admin/all
+// @access  Private/Admin
+const getAdminBlogs = async (req, res) => {
   try {
-    const blog = await Blog.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { views: 1 } },
-      { new: true }
-    );
+    const { page = 1, limit = 10, status, search } = req.query;
+    const query = {};
 
-    if (!blog) {
-      return res.status(404).json({ message: 'Blog not found' });
+    if (status) {
+      query.status = status;
     }
 
-    res.json({ views: blog.views });
+    if (search) {
+      query.$text = { $search: search };
+    }
+
+    const blogs = await Blog.find(query)
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Blog.countDocuments(query);
+
+    res.json({
+      blogs,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error' });
@@ -229,5 +221,5 @@ module.exports = {
   createBlog,
   updateBlog,
   deleteBlog,
-  incrementViews
+  getAdminBlogs
 };
