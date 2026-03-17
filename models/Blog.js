@@ -3,72 +3,71 @@ const mongoose = require('mongoose');
 const blogSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: true,
-    trim: true,
+    required: [true, 'Please add a title'],
+    trim: true
   },
   slug: {
     type: String,
     required: true,
     unique: true,
-    lowercase: true,
-  },
-  excerpt: {
-    type: String,
-    required: true,
+    lowercase: true
   },
   content: {
     type: String,
-    required: true,
+    required: [true, 'Please add content']
   },
-  author: {
+  excerpt: {
     type: String,
-    required: true,
+    required: [true, 'Please add an excerpt'],
+    maxlength: [200, 'Excerpt cannot be more than 200 characters']
   },
   featuredImage: {
     type: String,
+    default: null
   },
-  publicId: {
+  author: {
     type: String,
+    default: 'Admin'
   },
   category: {
     type: String,
-    enum: ['news', 'article', 'update', 'achievement'],
-    default: 'article',
+    default: 'General'
   },
-  tags: {
-    type: [String],
-  },
-  isActive: {
-    type: Boolean,
-    default: true,
+  tags: [{
+    type: String
+  }],
+  status: {
+    type: String,
+    enum: ['draft', 'published'],
+    default: 'draft'
   },
   views: {
     type: Number,
-    default: 0,
+    default: 0
   },
   publishedAt: {
-    type: Date,
-    default: Date.now,
+    type: Date
   },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
+  metaTitle: String,
+  metaDescription: String,
+  metaKeywords: String
+}, {
+  timestamps: true
 });
 
-blogSchema.pre('save', function (next) {
-  this.updatedAt = Date.now();
-  
-  // Create slug from title if not provided
-  if (!this.slug && this.title) {
+// Create slug from title before saving
+blogSchema.pre('save', function(next) {
+  if (this.isModified('title')) {
     this.slug = this.title
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '');
+      .replace(/[^a-zA-Z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+  
+  // Set publishedAt when status changes to published
+  if (this.isModified('status') && this.status === 'published' && !this.publishedAt) {
+    this.publishedAt = Date.now();
   }
   
   next();

@@ -7,20 +7,19 @@ const {
   createBlog,
   updateBlog,
   deleteBlog,
-  toggleBlogStatus,
+  incrementViews
 } = require('../controllers/blogController');
 const { protect } = require('../middleware/authMiddleware');
-const { uploadSingle } = require('../middleware/uploadMiddleware');
 
 // Public routes
 router.get('/', getBlogs);
 router.get('/slug/:slug', getBlogBySlug);
 router.get('/:id', getBlogById);
+router.patch('/:id/views', incrementViews);
 
-// Private routes (Admin only)
-router.post('/', protect, uploadSingle('featuredImage'), createBlog);
-router.put('/:id', protect, uploadSingle('featuredImage'), updateBlog);
+// Protected routes (require authentication)
+router.post('/', protect, createBlog);
+router.put('/:id', protect, updateBlog);
 router.delete('/:id', protect, deleteBlog);
-router.patch('/:id/toggle', protect, toggleBlogStatus);
 
 module.exports = router;
