@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const blogSchema = new mongoose.Schema(
   {
@@ -11,7 +11,8 @@ const blogSchema = new mongoose.Schema(
       required: true,
     },
     image: {
-      type: String,
+      type: String, // Cloudinary URL
+      required: true,
     },
     author: {
       type: String,
@@ -25,4 +26,4 @@ const blogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Blog', blogSchema);
+module.exports = mongoose.model("Blog", blogSchema);
