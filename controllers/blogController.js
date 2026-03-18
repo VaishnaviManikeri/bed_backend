@@ -1,13 +1,12 @@
 const Blog = require('../models/Blog');
 const { cloudinary } = require('../config/cloudinary');
 
-// @desc    Get all published blogs
+// @desc    Get all blogs
 // @route   GET /api/blogs
 const getBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find({ status: 'published' })
-      .sort({ createdAt: -1 })
-      .select('-content');
+    const blogs = await Blog.find({ isPublished: true })
+      .sort({ publishedAt: -1 });
     res.json(blogs);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -22,29 +21,24 @@ const getBlogBySlug = async (req, res) => {
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
     }
-    
-    // Increment views
-    blog.views += 1;
-    await blog.save();
-    
     res.json(blog);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Create new blog
+// @desc    Create a blog (Admin only)
 // @route   POST /api/blogs
 const createBlog = async (req, res) => {
   try {
     const blog = await Blog.create(req.body);
     res.status(201).json(blog);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Update blog
+// @desc    Update a blog (Admin only)
 // @route   PUT /api/blogs/:id
 const updateBlog = async (req, res) => {
   try {
@@ -58,44 +52,32 @@ const updateBlog = async (req, res) => {
     }
     res.json(blog);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Delete blog
+// @desc    Delete a blog (Admin only)
 // @route   DELETE /api/blogs/:id
 const deleteBlog = async (req, res) => {
   try {
-    const blog = await Blog.findById(req.params.id);
+    const blog = await Blog.findByIdAndDelete(req.params.id);
     if (!blog) {
       return res.status(404).json({ message: 'Blog not found' });
     }
-    
-    // Delete image from Cloudinary
-    if (blog.featuredImage) {
-      const publicId = blog.featuredImage.split('/').pop().split('.')[0];
+
+    // Delete image from cloudinary if exists
+    if (blog.coverImage) {
+      const publicId = blog.coverImage.split('/').pop().split('.')[0];
       await cloudinary.uploader.destroy(`website_gallery/${publicId}`);
     }
-    
-    await blog.deleteOne();
+
     res.json({ message: 'Blog deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Get all blogs (admin)
-// @route   GET /api/blogs/admin/all
-const getAllBlogsAdmin = async (req, res) => {
-  try {
-    const blogs = await Blog.find().sort({ createdAt: -1 });
-    res.json(blogs);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// @desc    Upload image
+// @desc    Upload blog image (Admin only)
 // @route   POST /api/blogs/upload-image
 const uploadImage = async (req, res) => {
   try {
@@ -108,12 +90,23 @@ const uploadImage = async (req, res) => {
   }
 };
 
+// @desc    Get all blogs for admin (including unpublished)
+// @route   GET /api/blogs/admin/all
+const getAdminBlogs = async (req, res) => {
+  try {
+    const blogs = await Blog.find().sort({ createdAt: -1 });
+    res.json(blogs);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getBlogs,
   getBlogBySlug,
   createBlog,
   updateBlog,
   deleteBlog,
-  getAllBlogsAdmin,
   uploadImage,
+  getAdminBlogs,
 };

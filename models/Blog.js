@@ -23,27 +23,33 @@ const blogSchema = new mongoose.Schema({
     required: true,
     default: 'Admin',
   },
+  authorImage: {
+    type: String,
+    default: '',
+  },
+  coverImage: {
+    type: String,
+    required: true,
+  },
   content: {
     type: String,
     required: true,
   },
-  featuredImage: {
-    type: String,
-    required: true,
-  },
   readingTime: {
-    type: String,
-    required: true,
-  },
-  status: {
-    type: String,
-    enum: ['draft', 'published'],
-    default: 'published',
-  },
-  views: {
     type: Number,
-    default: 0,
+    default: 5,
   },
+  publishedAt: {
+    type: Date,
+    default: Date.now,
+  },
+  isPublished: {
+    type: Boolean,
+    default: true,
+  },
+  tags: [{
+    type: String,
+  }],
 }, {
   timestamps: true,
 });
@@ -53,9 +59,8 @@ blogSchema.pre('save', function(next) {
   if (this.isModified('title')) {
     this.slug = this.title
       .toLowerCase()
-      .replace(/[^a-zA-Z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
   }
   next();
 });
