@@ -1,3 +1,4 @@
+// backend/controllers/blogController.js
 const Blog = require('../models/Blog');
 const { cloudinary } = require('../config/cloudinary');
 
@@ -31,9 +32,36 @@ const getBlogBySlug = async (req, res) => {
 // @route   POST /api/blogs
 const createBlog = async (req, res) => {
   try {
-    const blog = await Blog.create(req.body);
+    console.log('Creating blog with data:', req.body); // Debug log
+    
+    // Validate required fields
+    const requiredFields = ['title', 'metaTitle', 'metaDescription', 'author', 'coverImage', 'content'];
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    
+    if (missingFields.length > 0) {
+      return res.status(400).json({ 
+        message: `Missing required fields: ${missingFields.join(', ')}` 
+      });
+    }
+
+    // Ensure slug is generated
+    const blogData = {
+      ...req.body,
+      slug: req.body.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+    };
+
+    const blog = await Blog.create(blogData);
+    console.log('Blog created successfully:', blog); // Debug log
     res.status(201).json(blog);
   } catch (error) {
+    console.error('Error creating blog:', error); // Debug log
+    if (error.code === 11000) {
+      // Duplicate key error (slug might be duplicate)
+      return res.status(400).json({ message: 'A blog with this title already exists' });
+    }
     res.status(500).json({ message: error.message });
   }
 };
@@ -52,6 +80,7 @@ const updateBlog = async (req, res) => {
     }
     res.json(blog);
   } catch (error) {
+    console.error('Error updating blog:', error);
     res.status(500).json({ message: error.message });
   }
 };
