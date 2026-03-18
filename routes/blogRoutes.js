@@ -1,24 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
-const { uploadSingle } = require('../middleware/uploadMiddleware');
+const { upload } = require('../config/cloudinary');
 const {
   getBlogs,
   getBlogBySlug,
-  getBlogById,
   createBlog,
   updateBlog,
-  deleteBlog
+  deleteBlog,
+  getAllBlogsAdmin,
+  uploadImage,
 } = require('../controllers/blogController');
 
 // Public routes
 router.get('/', getBlogs);
 router.get('/:slug', getBlogBySlug);
 
-// Protected admin routes
-router.get('/id/:id', protect, getBlogById);
-router.post('/', protect, uploadSingle('featuredImage'), createBlog);
-router.put('/:id', protect, uploadSingle('featuredImage'), updateBlog);
+// Admin routes
+router.get('/admin/all', protect, getAllBlogsAdmin);
+router.post('/', protect, createBlog);
+router.put('/:id', protect, updateBlog);
 router.delete('/:id', protect, deleteBlog);
+router.post('/upload-image', protect, upload.single('image'), uploadImage);
 
 module.exports = router;
