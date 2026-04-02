@@ -48,6 +48,9 @@ app.use('/api/careers', careerRoutes);
 app.use('/api/blogs', blogRoutes);
 
 /* ------------------ PING ROUTE ------------------ */
+app.get('/', (req, res) => {
+  res.send("🚀 Server is running successfully on Render!");
+});
 
 // ✅ UptimeRobot will hit this
 app.get('/ping', (req, res) => {
