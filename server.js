@@ -4,8 +4,6 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const Admin = require('./models/Admin');
-const cron = require('node-cron');
-const axios = require('axios');
 
 // Load env variables
 dotenv.config();
@@ -51,7 +49,7 @@ app.use('/api/blogs', blogRoutes);
 
 /* ------------------ PING ROUTE ------------------ */
 
-// 🔥 UptimeRobot will hit this
+// ✅ UptimeRobot will hit this
 app.get('/ping', (req, res) => {
   res.status(200).send("Server is alive 🚀");
 });
@@ -60,36 +58,26 @@ app.get('/ping', (req, res) => {
 
 const createDefaultAdmin = async () => {
   try {
+
     const adminExists = await Admin.findOne({
       username: process.env.ADMIN_USERNAME || "jadhavar"
     });
 
     if (!adminExists) {
+
       await Admin.create({
         username: process.env.ADMIN_USERNAME || "jadhavar",
         password: process.env.ADMIN_PASSWORD || "jadhavar123",
       });
 
       console.log("Default admin created successfully");
+
     }
+
   } catch (error) {
     console.error("Error creating default admin:", error);
   }
 };
-
-/* ------------------ AUTO PING (KEEP ALIVE) ------------------ */
-
-// 🔥 Optional self-ping every 14 minutes
-const URL = process.env.APP_URL || "http://localhost:5000";
-
-cron.schedule('*/14 * * * *', async () => {
-  try {
-    await axios.get(`${URL}/ping`);
-    console.log("Self ping successful");
-  } catch (error) {
-    console.error("Self ping failed:", error.message);
-  }
-});
 
 /* ------------------ SERVER ------------------ */
 
