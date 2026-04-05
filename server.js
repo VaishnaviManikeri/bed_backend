@@ -24,7 +24,7 @@ const app = express();
 
 const corsOptions = {
   origin: [
-    "https://www.jgefs.org",
+    "https://jgefs.org",
     "www.jgefs.org",
     "http://localhost:5173",
     "http://localhost:3000",
