@@ -20,29 +20,41 @@ const blogRoutes = require('./routes/blogRoutes');
 
 const app = express();
 
-/* ------------------ CORS CONFIG ------------------ */
+/* ================== CORS CONFIG ================== */
 
-const corsOptions = {
-  origin: [
-    "https://jgefs.org",
-    "www.jgefs.org",
-    "http://localhost:5173",
-    "http://localhost:3000",
+// ✅ Allowed origins
+const allowedOrigins = [
+  "https://jgefs.org",
+  "https://www.jgefs.org",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
 
-  ],
+// ✅ CORS middleware
+app.use(cors({
+  origin: function (origin, callback) {
+
+    // allow requests with no origin (Postman, mobile apps)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log("❌ Blocked by CORS:", origin);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"]
-};
+}));
 
-app.use(cors(corsOptions));
-
-/* ------------------ MIDDLEWARE ------------------ */
+/* ================== MIDDLEWARE ================== */
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-/* ------------------ ROUTES ------------------ */
+/* ================== ROUTES ================== */
 
 app.use('/api/admin', adminRoutes);
 app.use('/api/gallery', galleryRoutes);
@@ -50,46 +62,45 @@ app.use('/api/notices', noticeRoutes);
 app.use('/api/careers', careerRoutes);
 app.use('/api/blogs', blogRoutes);
 
-/* ------------------ PING ROUTE ------------------ */
+/* ================== HEALTH CHECK ================== */
+
+// Root route
 app.get('/', (req, res) => {
   res.send("🚀 Server is running successfully on Render!");
 });
 
-// ✅ UptimeRobot will hit this
+// Ping route (for uptime monitoring)
 app.get('/ping', (req, res) => {
   res.status(200).send("Server is alive 🚀");
 });
 
-/* ------------------ DEFAULT ADMIN ------------------ */
+/* ================== DEFAULT ADMIN ================== */
 
 const createDefaultAdmin = async () => {
   try {
-
     const adminExists = await Admin.findOne({
       username: process.env.ADMIN_USERNAME || "jadhavar"
     });
 
     if (!adminExists) {
-
       await Admin.create({
         username: process.env.ADMIN_USERNAME || "jadhavar",
         password: process.env.ADMIN_PASSWORD || "jadhavar123",
       });
 
-      console.log("Default admin created successfully");
-
+      console.log("✅ Default admin created successfully");
     }
 
   } catch (error) {
-    console.error("Error creating default admin:", error);
+    console.error("❌ Error creating default admin:", error);
   }
 };
 
-/* ------------------ SERVER ------------------ */
+/* ================== SERVER ================== */
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
   createDefaultAdmin();
 });
