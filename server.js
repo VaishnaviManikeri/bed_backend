@@ -66,12 +66,23 @@ app.use('/api/blogs', blogRoutes);
 
 // Root route
 app.get('/', (req, res) => {
-  res.send("🚀 Server is running successfully on Render!");
+  res.send("🚀 Server is running successfully on Hostinger!");
 });
 
 // Ping route (for uptime monitoring)
 app.get('/ping', (req, res) => {
   res.status(200).send("Server is alive 🚀");
+});
+
+/* ================== HOSTINGER TEST API ================== */
+
+// ✅ New API to verify backend is running on Hostinger
+app.get('/api/hostinger-status', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "✅ Backend is running on Hostinger!",
+    timestamp: new Date()
+  });
 });
 
 /* ================== DEFAULT ADMIN ================== */
@@ -98,7 +109,8 @@ const createDefaultAdmin = async () => {
 
 /* ================== SERVER ================== */
 
-const PORT = process.env.PORT || 5000;
+// ✅ Updated PORT
+const PORT = process.env.PORT || 5005;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
